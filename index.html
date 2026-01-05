@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Camera Capture & Upload</title>
+<style>
+  video, img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+  #uploadBtn {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Camera Capture & Upload</h1>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<img id="photo" alt="Captured Photo" style="display:none;" />
+
+<br />
+
+<button id="captureBtn">Capture</button>
+<button id="uploadBtn">Upload</button>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const photo = document.getElementById('photo');
+  const captureBtn = document.getElementById('captureBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+
+  // Replace with your actual Apps Script Web App URL:
+  const uploadUrl = 'https://script.google.com/macros/s/AKfycbyjhrUjivog-p2IYAmCAl12ofulSvX6CsL41qTHQLQfpV5IM7ZVKaX0noufrZ9lPcOTKg/exec';
+
+  // Access the camera
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      video.srcObject = stream;
+    })
+    .catch(err => {
+      alert('Error accessing camera: ' + err);
+    });
+
+  captureBtn.addEventListener('click', () => {
+    // Set canvas size
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to data URL (PNG)
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Show captured image
+    photo.src = dataUrl;
+    photo.style.display = 'block';
+
+    // Hide video and capture button
+    video.style.display = 'none';
+    captureBtn.style.display = 'none';
+
+    // Show upload button
+    uploadBtn.style.display = 'inline-block';
+  });
+
+  uploadBtn.addEventListener('click', () => {
+    const dataUrl = photo.src;
+    const base64Data = dataUrl.split(',')[1];  // Strip "data:image/png;base64,"
+
+    fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ imageBase64: base64Data })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        alert('Upload successful!');
+        // Reset UI for next capture
+        photo.style.display = 'none';
+        video.style.display = 'block';
+        captureBtn.style.display = 'inline-block';
+        uploadBtn.style.display = 'none';
+      } else {
+        alert('Upload failed: ' + data.message);
+      }
+    })
+    .catch(error => {
+      alert('Upload error: ' + error);
+    });
+  });
+</script>
+
+</body>
+</html>
